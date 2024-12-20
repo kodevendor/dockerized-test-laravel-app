@@ -1,4 +1,4 @@
-name: Deploy Dockerized Test Laravel App
+name: Deploy Dockerized Test Laravel App On AWS EC2 Instance
 
 on:
   push:
