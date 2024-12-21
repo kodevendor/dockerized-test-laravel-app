@@ -38,5 +38,7 @@ jobs:
         run: docker run -d --name mysql --network dockerized_test_laravel_app_network -e MYSQL_ROOT_PASSWORD=root_password -e MYSQL_DATABASE=laravel -e MYSQL_USER=database_user -e MYSQL_PASSWORD=database_password -p 3306:3306 mysql:latest
       - name: Pull PhpMyAdmin Image
         run: docker pull phpmyadmin:latest
+      - name: Delete Old PhpMyAdmin Container
+        run: docker rm -f phpmyadmin
       - name: Run PhpMyAdmin container
         run: docker run -d --name phpmyadmin --network dockerized_test_laravel_app_network -e PMA_HOST=mysql -e PMA_PORT=3306 -p 8080:80 phpmyadmin:latest
