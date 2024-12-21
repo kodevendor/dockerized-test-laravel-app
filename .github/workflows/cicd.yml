@@ -24,11 +24,11 @@ jobs:
     steps:
       - name: Create Custom Docker Network
         run: docker network create dockerized_test_laravel_app_network || true
-      - name: Pull image from docker hub
+      - name: Pull Laravel App Image
         run: docker pull kodevendor/dockerized-test-laravel-app:latest
-      - name: Delete old container
+      - name: Delete Old Laravel App Container
         run: docker rm -f dockerized_test_laravel_app_container
-      - name: Run Docker Container
+      - name: Run Laravel App Container
         run: docker run -d -p 9000:80 --name dockerized_test_laravel_app_container --network dockerized_test_laravel_app_network kodevendor/dockerized-test-laravel-app
       - name: Pull MySQL Image
         run: docker pull mysql:latest
