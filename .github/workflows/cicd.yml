@@ -11,34 +11,72 @@ jobs:
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
-      - name: Login to docker hub
-        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Build Docker Image
-        run: docker build -t kodevendor/dockerized-test-laravel-app  .
-      - name: Publish Image to docker hub
-        run: docker push kodevendor/dockerized-test-laravel-app:latest
+        run: |
+          ECR_REPO_URI=767397662464.dkr.ecr.ap-south-1.amazonaws.com/kodevendor/dockerized-test-laravel-app
+          docker build -t dockerized-test-laravel-app .
+          docker tag dockerized-test-laravel-app:latest $ECR_REPO_URI:latest
+
+      - name: Push Image to Amazon ECR
+        run: |
+          ECR_REPO_URI=767397662464.dkr.ecr.ap-south-1.amazonaws.com/kodevendor/dockerized-test-laravel-app
+          docker push $ECR_REPO_URI:latest
 
   deploy:
     needs: build
     runs-on: self-hosted
     steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Create Custom Docker Network
         run: docker network create dockerized_test_laravel_app_network || true
+
       - name: Pull Laravel App Image
-        run: docker pull kodevendor/dockerized-test-laravel-app:latest
+        run: |
+          ECR_REPO_URI=767397662464.dkr.ecr.ap-south-1.amazonaws.com/kodevendor/dockerized-test-laravel-app
+          docker pull $ECR_REPO_URI:latest
+
       - name: Delete Old Laravel App Container
-        run: docker rm -f dockerized_test_laravel_app_container
+        run: docker rm -f dockerized_test_laravel_app_container || true
+
       - name: Run Laravel App Container
-        run: docker run -d -p 9000:80 --name dockerized_test_laravel_app_container --network dockerized_test_laravel_app_network kodevendor/dockerized-test-laravel-app
+        run: |
+          ECR_REPO_URI=767397662464.dkr.ecr.ap-south-1.amazonaws.com/kodevendor/dockerized-test-laravel-app
+          docker run -d -p 9000:80 --name dockerized_test_laravel_app_container --network dockerized_test_laravel_app_network $ECR_REPO_URI:latest
+
       - name: Pull MySQL Image
         run: docker pull mysql:latest
+
       - name: Delete Old MySQL Container
-        run: docker rm -f mysql
+        run: docker rm -f mysql || true
+
       - name: Run MySQL Container
         run: docker run -d --name mysql --network dockerized_test_laravel_app_network -e MYSQL_ROOT_PASSWORD=root_password -e MYSQL_DATABASE=laravel -e MYSQL_USER=database_user -e MYSQL_PASSWORD=database_password -p 3306:3306 mysql:latest
+
       - name: Pull PhpMyAdmin Image
         run: docker pull phpmyadmin:latest
+
       - name: Delete Old PhpMyAdmin Container
-        run: docker rm -f phpmyadmin
+        run: docker rm -f phpmyadmin || true
+
       - name: Run PhpMyAdmin container
         run: docker run -d --name phpmyadmin --network dockerized_test_laravel_app_network -e PMA_HOST=mysql -e PMA_PORT=3306 -p 8080:80 phpmyadmin:latest
