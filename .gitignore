@@ -22,3 +22,4 @@ yarn-error.log
 /.vscode
 /.zed
 cicd_docker.yml
+cicd_ecr_failed.yml
